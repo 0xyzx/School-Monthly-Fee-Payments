@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Admin Panel - Fee Management</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -98,10 +98,57 @@
             </div>
         </aside>
 
-        <!-- Right Column: Student List -->
-        <main class="md:col-span-2">
+        <!-- Right Column: Stats and Student List -->
+        <!-- MODIFIED: Added space-y-8 -->
+        <main class="md:col-span-2 space-y-8">
+
+            <!-- ADDED: Dashboard Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <!-- Total Students Card -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex items-center gap-4">
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Students</p>
+                        <p id="total-students-stat" class="text-2xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+                <!-- Total Paid Card -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex items-center gap-4">
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Paid</p>
+                        <p id="total-paid-stat" class="text-2xl font-bold text-gray-900">₹0</p>
+                    </div>
+                </div>
+                <!-- Total Pending Card -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 flex items-center gap-4">
+                    <div class="p-3 bg-yellow-100 rounded-full">
+                        <i data-lucide="clock" class="w-6 h-6 text-yellow-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Pending</L>
+                        <p id="total-pending-stat" class="text-2xl font-bold text-gray-900">₹0</p>
+                    </div>
+                </div>
+            </div>
+            <!-- END: Dashboard Stats -->
+
+            <!-- Existing Student List Card -->
             <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Student List</h2>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b pb-2 gap-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Student List</h2>
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" id="student-search-input" placeholder="Search by Roll Number..." class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006336]">
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                </div>
+                
                 <div id="student-list-loader" class="flex justify-center items-center py-8">
                     <div class="spinner"></div>
                     <p class="ml-4 text-gray-600">Loading students...</p>
@@ -173,7 +220,6 @@
     <div id="admin-toast" class=""></div>
 
     <!-- Lucide Icons Script -->
-    <!-- Moved here from <head> to ensure `lucide` is defined before module script executes -->
     <script src="https://unpkg.com/lucide-icons"></script>
 
     <!-- Firebase SDKs -->
@@ -203,6 +249,7 @@
         let currentEditingStudentId = null;
         let currentEditingStudentData = null;
         let studentIdToDelete = null; // For delete confirmation
+        let allStudents = []; // To store all students for searching
         const months = [
             'January', 'February', 'March', 'April', 'May', 'June', 
             'July', 'August', 'September', 'October', 'November', 'December'
@@ -225,10 +272,8 @@
                         authStatus.classList.add('text-green-600');
                         isAuthReady = true;
                         
-                        // Enable the form button
                         document.getElementById('add-student-btn').disabled = false;
 
-                        // Initialize icons *after* auth is ready and script has likely loaded
                         if (typeof lucide !== 'undefined') {
                             lucide.createIcons();
                         } else {
@@ -241,7 +286,6 @@
                         authStatus.classList.remove('text-green-600');
                         isAuthReady = false;
                         
-                        // Disable the form button
                         document.getElementById('add-student-btn').disabled = true;
 
                         signInAnonymously(auth).catch((error) => {
@@ -256,6 +300,8 @@
                 // Form Listeners
                 document.getElementById('add-student-form').addEventListener('submit', handleAddStudent);
                 document.getElementById('add-other-fee-form').addEventListener('submit', handleAddOtherFee);
+                
+                document.getElementById('student-search-input').addEventListener('input', handleStudentSearch);
 
                 // Modal Listeners
                 document.getElementById('modal-close-btn').addEventListener('click', closeModal);
@@ -337,8 +383,6 @@
 
             } catch (error) {
                 console.error("Error adding student:", error);
-                // This can fail if the composite index for the query is not created.
-                // Providing a helpful error message.
                 if (error.code === 'failed-precondition') {
                      showAdminToast("Error: Missing database index. Please check Firebase console.", "error", 5000);
                      console.error("Firestore error: The query requires an index. Go to your Firebase console -> Firestore Database -> Indexes and create a composite index for 'students' on 'rollNumber' (Ascending).");
@@ -351,7 +395,7 @@
         }
 
         /**
-         * Loads and displays the list of students from Firestore.
+         * Loads the list of students from Firestore.
          */
         function loadStudents() {
             const listContainer = document.getElementById('student-list');
@@ -361,52 +405,27 @@
             
             onSnapshot(q, (snapshot) => {
                 loader.classList.add('hidden');
-                listContainer.innerHTML = ''; // Clear list
-
-                if (snapshot.empty) {
-                    listContainer.innerHTML = '<p class="text-gray-500">No students found. Add one to get started.</p>';
-                    return;
-                }
                 
-                // Sort documents by creation date, newest first
-                // This is safer than ordering by 'name' which would require another index
                 const docs = snapshot.docs.sort((a, b) => {
                     const timeA = a.data().createdAt?.toMillis() || 0;
                     const timeB = b.data().createdAt?.toMillis() || 0;
                     return timeB - timeA; // Newest first
                 });
 
-                docs.forEach(doc => {
-                    const student = doc.data();
-                    const studentEl = document.createElement('div');
-                    studentEl.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg hover:bg-gray-50';
-                    studentEl.innerHTML = `
-                        <div>
-                            <p class="font-semibold text-lg text-gray-900">${student.name}</p>
-                            <p class="text-sm text-gray-600">${student.class} | ${student.rollNumber} | ${student.phone}</p>
-                        </div>
-                        <div class="flex gap-2 mt-4 sm:mt-0">
-                            <button class="manage-fees-btn text-sm bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
-                                <i data-lucide="edit" class="w-4 h-4 inline-block -mt-1 mr-1"></i>Manage Fees
-                            </button>
-                            <button class="delete-student-btn text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">
-                                <i data-lucide="trash-2" class="w-4 h-4 inline-block -mt-1 mr-1"></i>Delete
-                            </button>
-                        </div>
-                    `;
-                    
-                    // Add event listeners
-                    studentEl.querySelector('.manage-fees-btn').addEventListener('click', () => {
-                        openModal(doc.id, student);
-                    });
-                    studentEl.querySelector('.delete-student-btn').addEventListener('click', () => {
-                        showDeleteConfirmation(doc.id, student.name);
-                    });
+                // Store all students globally
+                allStudents = docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
 
-                    listContainer.appendChild(studentEl);
-                });
+                // ADDED: Update dashboard stats
+                updateDashboardStats(allStudents);
+
+                // Initial render
+                renderStudentList(allStudents);
                 
-                // Re-render icons - this is a good fallback place
+                document.getElementById('student-search-input').value = '';
+
                 if (typeof lucide !== 'undefined') {
                     lucide.createIcons();
                 }
@@ -417,6 +436,75 @@
                 listContainer.innerHTML = '<p class="text-red-500">Error loading students.</p>';
                 showAdminToast("Could not load student list.", "error");
             });
+        }
+        
+        /**
+         * Renders a list of student elements to the DOM.
+         * @param {Array} students - The array of student objects to render.
+         */
+        function renderStudentList(students) {
+            const listContainer = document.getElementById('student-list');
+            listContainer.innerHTML = ''; // Clear list
+
+            if (students.length === 0) {
+                const searchTerm = document.getElementById('student-search-input').value;
+                if (searchTerm) {
+                    listContainer.innerHTML = `<p class="text-gray-500">No students found for "${searchTerm}".</p>`;
+                } else {
+                    listContainer.innerHTML = '<p class="text-gray-500">No students found. Add one to get started.</p>';
+                }
+                return;
+            }
+
+            students.forEach(student => {
+                const studentEl = document.createElement('div');
+                studentEl.className = 'flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-lg hover:bg-gray-50';
+                studentEl.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-lg text-gray-900">${student.name}</p>
+                        <p class="text-sm text-gray-600">${student.class} | ${student.rollNumber} | ${student.phone}</p>
+                    </div>
+                    <div class="flex gap-2 mt-4 sm:mt-0">
+                        <button class="manage-fees-btn text-sm bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i data-lucide="edit" class="w-4 h-4 inline-block -mt-1 mr-1"></i>Manage Fees
+                        </button>
+                        <button class="delete-student-btn text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4 inline-block -mt-1 mr-1"></i>Delete
+                        </button>
+                    </div>
+                `;
+                
+                studentEl.querySelector('.manage-fees-btn').addEventListener('click', () => {
+                    openModal(student.id, student);
+                });
+                studentEl.querySelector('.delete-student-btn').addEventListener('click', () => {
+                    showDeleteConfirmation(student.id, student.name);
+                });
+
+                listContainer.appendChild(studentEl);
+            });
+
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        
+        /**
+         * Filters the student list based on the search input.
+         */
+        function handleStudentSearch(e) {
+            const searchTerm = e.target.value.trim().toUpperCase();
+            
+            if (!searchTerm) {
+                renderStudentList(allStudents); // Show all students if search is empty
+                return;
+            }
+
+            const filteredStudents = allStudents.filter(student => 
+                student.rollNumber.toUpperCase().includes(searchTerm)
+            );
+
+            renderStudentList(filteredStudents);
         }
 
         /**
@@ -468,7 +556,7 @@
          */
         function openModal(studentId, student) {
             currentEditingStudentId = studentId;
-            currentEditingStudentData = JSON.parse(JSON.stringify(student)); // Deep copy to avoid mutation
+            currentEditingStudentData = JSON.parse(JSON.stringify(student)); // Deep copy
 
             document.getElementById('modal-student-name').textContent = student.name;
             
@@ -503,7 +591,6 @@
                 modal.querySelector('.modal-content').classList.remove('-translate-y-10');
             }, 10);
             
-            // Re-render icons in modal
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
@@ -530,35 +617,29 @@
             toggleButtonLoading('save-monthly-fees-btn', 'save-monthly-spinner', true);
             
             try {
-                // Get current status from data to preserve 'Paid' status
                 const originalFees = currentEditingStudentData.monthlyFees || [];
                 
                 const newMonthlyFees = months.map((month, index) => {
                     const input = document.getElementById(`month-${index}`);
                     const originalFee = originalFees.find(f => f.month === month) || { status: 'Pending' };
                     
-                    // If fee was already paid, keep original data
                     if (originalFee.status === 'Paid') {
                         return originalFee;
                     }
                     
-                    // Otherwise, update with new amount
                     return {
                         month: month,
                         amount: parseInt(input.value) || 0,
-                        status: 'Pending' // Will remain pending until paid
+                        status: 'Pending'
                     };
                 });
                 
-                // Update Firestore
                 const studentDocRef = doc(db, "students", currentEditingStudentId);
                 await updateDoc(studentDocRef, {
                     monthlyFees: newMonthlyFees
                 });
 
-                // Update local data
                 currentEditingStudentData.monthlyFees = newMonthlyFees;
-
                 showAdminToast("Monthly fees updated successfully!", "success");
 
             } catch (error) {
@@ -590,10 +671,8 @@
 
             try {
                 const newFee = { name, amount, status: 'Pending' };
-                // Get the most current array from local data
                 let updatedOtherFees = [...(currentEditingStudentData.otherFees || [])];
                 
-                // Check if fee with same name already exists
                 if (updatedOtherFees.find(f => f.name.toLowerCase() === name.toLowerCase())) {
                     showAdminToast("A fee with this name already exists.", "error");
                     toggleButtonLoading('add-other-fee-btn', 'add-other-fee-spinner', false);
@@ -602,22 +681,20 @@
 
                 updatedOtherFees.push(newFee);
 
-                // Update Firestore
                 const studentDocRef = doc(db, "students", currentEditingStudentId);
                 await updateDoc(studentDocRef, {
                     otherFees: updatedOtherFees
                 });
 
-                // Update local data and re-render
                 currentEditingStudentData.otherFees = updatedOtherFees;
                 renderOtherFees(updatedOtherFees);
 
-                // Clear inputs
                 nameInput.value = '';
                 amountInput.value = '';
                 showAdminToast("Other fee added.", "success");
 
-            } catch (error) {
+            } catch (error)
+             {
                 console.error("Error adding other fee:", error);
                 showAdminToast("Error adding fee.", "error");
             } finally {
@@ -654,7 +731,6 @@
                 `;
             });
             
-            // Add listeners for delete buttons
             document.querySelectorAll('.delete-other-fee-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const index = parseInt(e.currentTarget.getAttribute('data-index'));
@@ -662,7 +738,6 @@
                 });
             });
 
-            // Ensure icons render after adding new ones
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
@@ -677,7 +752,6 @@
             try {
                 let updatedOtherFees = [...(currentEditingStudentData.otherFees || [])];
                 
-                // Check if fee to be deleted is already paid
                 if (updatedOtherFees[index].status === 'Paid') {
                     showAdminToast("Cannot delete a fee that has already been paid.", "error");
                     return;
@@ -685,13 +759,11 @@
                 
                 updatedOtherFees.splice(index, 1); // Remove the item
 
-                // Update Firestore
                 const studentDocRef = doc(db, "students", currentEditingStudentId);
                 await updateDoc(studentDocRef, {
                     otherFees: updatedOtherFees
                 });
 
-                // Update local data and re-render
                 currentEditingStudentData.otherFees = updatedOtherFees;
                 renderOtherFees(updatedOtherFees);
 
@@ -705,6 +777,50 @@
 
 
         // --- UTILITY FUNCTIONS ---
+        
+        // ADDED: New function to update dashboard stats
+        /**
+         * Calculates and updates the dashboard stats.
+         * @param {Array} students - The array of all student objects.
+         */
+        function updateDashboardStats(students) {
+            // 1. Total Students
+            const totalStudents = students.length;
+            document.getElementById('total-students-stat').textContent = totalStudents;
+
+            // 2. Total Paid & Pending
+            let totalPaid = 0;
+            let totalPending = 0;
+
+            students.forEach(student => {
+                // Combine monthly and other fees into one array
+                const allFees = [
+                    ...(student.monthlyFees || []), 
+                    ...(student.otherFees || [])
+                ];
+                
+                allFees.forEach(fee => {
+                    const amount = fee.amount || 0;
+                    if (fee.status === 'Paid') {
+                        totalPaid += amount;
+                    } else {
+                        // Any fee that is not 'Paid' is considered pending
+                        totalPending += amount;
+                    }
+                });
+            });
+            
+            // Format as Indian Rupees
+            const formatInr = (num) => `₹${num.toLocaleString('en-IN')}`;
+
+            document.getElementById('total-paid-stat').textContent = formatInr(totalPaid);
+            document.getElementById('total-pending-stat').textContent = formatInr(totalPending);
+            
+            // Re-render icons for the new stat cards
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
         
         /**
          * Toggles the loading state of a button.
