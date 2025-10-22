@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+match /databases/{database}/documents {
+
+// Students Collection
+match /students/{studentId} {
+
+  // ANY authenticated user (including anonymous) can search for
+  // and read student data. This is required for the public-facing
+  // index.html portal to work.
+  allow read: if request.auth != null;
+  
+  // ANY authenticated user (including anonymous) can create, update,
+  // and delete student records. This allows the admin.html panel
+  // to function out-of-the-box.
+  //
+  // !!! SECURITY WARNING !!!
+  // For a real-world application, you MUST make this more secure.
+  // You should restrict 'write' access to specific admin User IDs
+  // or by using Firebase Custom Claims.
+  // Example (secure): allow write: if request.auth.uid == "YOUR_ADMIN_UID";
+  allow write: if request.auth != null;
+}
+
+
+}
+}
