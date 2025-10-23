@@ -1,1 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Fee Management</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* UPDATED: 'morning dew' background */
+            background-color: #F6FEF9;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #83C441; /* 'fresh sprout' */
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background-color: #F6FEF9; /* 'morning dew' */
+        }
+        .status-paid {
+            /* UPDATED: 'fresh sprout' theme */
+            background-color: rgba(131, 196, 65, 0.2);
+            color: #83C441;
+        }
+        .status-pending {
+            background-color: #fffbeb;
+            color: #b45309;
+        }
+        .status-not-set {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-900">
+
+    <!-- Header -->
+    <!-- UPDATED: 'harvest' background -->
+    <header class="bg-[#003023] text-white shadow-md">
+        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Fee Management Admin Panel</h1>
+            <div class="flex items-center gap-2">
+                <div id="auth-status-indicator" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                <span id="auth-status-text" class="text-sm">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="container mx-auto max-w-7xl p-4 sm:p-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left Column: Add Student & Monthly Dashboard -->
+        <div class="lg:col-span-1 flex flex-col gap-6">
+            
+            <!-- Add Student Form -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Add New Student</h2>
+                <form id="add-student-form" class="space-y-4">
+                    <div>
+                        <label for="student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
+                        <!-- UPDATED: 'harvest' focus ring -->
+                        <input type="text" id="student-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <div>
+                        <label for="student-class" class="block text-sm font-medium text-gray-700">Class</label>
+                        <input type="text" id="student-class" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <div>
+                        <label for="student-roll" class="block text-sm font-medium text-gray-700">Roll Number</label>
+                        <input type="text" id="student-roll" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <div>
+                        <label for="student-phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                        <input type="tel" id="student-phone" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <div>
+                        <label for="monthly-fee-amount" class="block text-sm font-medium text-gray-700">Default Monthly Fee Amount</label>
+                        <input type="number" id="monthly-fee-amount" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <!-- UPDATED: 'harvest' button color -->
+                    <button type="submit" id="add-student-btn" class="w-full bg-[#003023] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#001a12] transition-colors duration-300 flex items-center justify-center gap-2" disabled>
+                        <i data-lucide="user-plus" class="w-5 h-5"></i>
+                        Add Student
+                    </button>
+                </form>
+            </div>
+
+            <!-- ADDED: Monthly Payment Dashboard -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-xl font-semibold">Monthly Payment Dashboard</h2>
+                </div>
+                <!-- Month Navigation -->
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prev-month-btn" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </button>
+                    <div class="text-center">
+                        <h3 id="dashboard-month" class="text-lg font-semibold text-[#003023]"></h3>
+                        <p id="dashboard-year" class="text-sm text-gray-500"></p>
+                    </div>
+                    <button id="next-month-btn" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <!-- ADDED: Class Filter -->
+                <div class="mb-4">
+                    <label for="dashboard-class-filter" class="block text-sm font-medium text-gray-700">Filter by Class</label>
+                    <select id="dashboard-class-filter" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023] bg-white">
+                        <option value="all">All Classes</option>
+                        <!-- Class options will be populated by JS -->
+                    </select>
+                </div>
+                
+                <!-- Paid Stats -->
+                <div class="mb-4 text-center">
+                    <p class="text-sm text-gray-600">Total Students Paid (this month, filtered)</p>
+                    <p id="dashboard-total-paid" class="text-2xl font-bold text-[#83C441]">0</p>
+                </div>
+                <!-- Student List -->
+                <div id="dashboard-student-list" class="max-h-60 overflow-y-auto space-y-3 pr-2">
+                    <!-- Student status items will be injected here -->
+                    <p class="text-gray-500 text-center">Loading students...</p>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Right Column: Stats & Student List -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+
+            <!-- ADDED: Main Stats Dashboard -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Overall Statistics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Total Students -->
+                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-blue-600">Total Students</h3>
+                        <p id="stats-total-students" class="text-3xl font-bold text-blue-800">0</p>
+                    </div>
+                    <!-- Total Paid -->
+                    <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-green-600">Total Paid</h3>
+                        <p id="stats-total-paid" class="text-3xl font-bold text-green-800">₹0</p>
+                    </div>
+                    <!-- Total Pending -->
+                    <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-yellow-600">Total Pending</h3>
+                        <p id="stats-total-pending" class="text-3xl font-bold text-yellow-800">₹0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List & Management -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 border-b pb-2 gap-4">
+                    <h2 class="text-xl font-semibold">Student List</h2>
+                    <!-- ADDED: Search Bar -->
+                    <div class="relative">
+                        <input type="text" id="search-student-input" placeholder="Search by Roll Number..." class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                        </span>
+                    </div>
+                </div>
+                <div id="student-list-container" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                    <!-- Student cards will be injected here by JavaScript -->
+                    <p id="loading-students" class="text-gray-500">Loading student data...</p>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Modal for Editing Monthly Fees -->
+    <div id="monthly-fee-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-semibold">Edit Monthly Fees</h3>
+                <button id="close-monthly-modal" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-grow pr-2">
+                <p class="mb-2">Student: <span id="modal-student-name-monthly" class="font-semibold"></span></p>
+                <div id="monthly-fees-editor" class="space-y-3">
+                    <!-- Monthly fee inputs will be injected here -->
+                </div>
+            </div>
+            <div class="border-t pt-4 mt-4 flex justify-end">
+                <!-- UPDATED: 'harvest' button color -->
+                <button id="save-monthly-fees" class="bg-[#003023] text-white font-bold py-2 px-5 rounded-lg hover:bg-[#001a12] transition-colors">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Managing Other Fees -->
+    <div id="other-fee-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-semibold">Manage Other Fees</h3>
+                <button id="close-other-modal" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <p class="mb-4">Student: <span id="modal-student-name-other" class="font-semibold"></span></p>
+            
+            <!-- Add New Fee Form -->
+            <div class="border-b pb-4 mb-4 space-y-3">
+                <h4 class="text-lg font-medium">Add New Fee</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Fee Name (e.g., Exam Fee)</label>
+                        <input type="text" id="new-other-fee-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Amount</label>
+                        <input type="number" id="new-other-fee-amount" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#003023]">
+                    </div>
+                </div>
+                <!-- UPDATED: 'fresh sprout' button color -->
+                <button id="add-other-fee-btn" class="w-full bg-[#83C441] text-white font-bold py-2 px-5 rounded-lg hover:bg-[#6aa034] transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    Add This Fee
+                </button>
+            </div>
+            
+            <!-- Existing Fees List -->
+            <div class="overflow-y-auto flex-grow pr-2">
+                <h4 class="text-lg font-medium mb-3">Existing Fees</h4>
+                <div id="other-fees-list" class="space-y-3">
+                    <!-- Other fee items will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ADDED: Custom Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-[100] hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+            <div class="flex items-start">
+                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <i data-lucide="alert-triangle" class="h-6 w-6 text-red-600"></i>
+                </div>
+                <div class="ml-4 text-left">
+                    <h3 class="text-lg font-semibold" id="confirm-title">Confirm Action</h3>
+                    <p class="text-sm text-gray-600 mt-2" id="confirm-message">Are you sure?</p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="confirm-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-ok-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Element -->
+    <div id="toast" class="fixed bottom-6 right-6 p-4 rounded-lg text-white shadow-lg transition-all transform translate-x-full opacity-0 z-[110]">
+        Toast message
+    </div>
+    
+    <!-- MOVED: Lucide Icons Script -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, collection, addDoc, onSnapshot, doc, 
+            updateDoc, setDoc, deleteDoc, query, where, getDocs, setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCGZHCC5mIFvO1w936PAmk6dTbEVAHQi5A",
+          authDomain: "monthly-fee-payments.firebaseapp.com",
+          projectId: "monthly-fee-payments",
+          storageBucket: "monthly-fee-payments.firebasestorage.app",
+          messagingSenderId: "583176823557",
+          appId: "1:583176823557:web:7e7f4eed0bdc27f78f4d6c",
+          measurementId: "G-1FW66VC988"
+        };
+        
+        // --- GLOBAL VARIABLES ---
+        let db, auth;
+        let isAuthReady = false;
+        let allStudents = []; // Local cache for all students
+        let filteredStudents = []; // For search and dashboard
+        let currentStudentId = null; // For modals
+        let unsubscribeStudentListener = null; // To stop the listener
+        let confirmCallback = null; // For custom confirmation modal
+        
+        // ADDED: For "Moving Month" Dashboard
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        let dashboardDate = new Date();
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial render of icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            
+            // Auth Status Elements
+            const authStatusIndicator = document.getElementById('auth-status-indicator');
+            const authStatusText = document.getElementById('auth-status-text');
+            const addStudentBtn = document.getElementById('add-student-btn');
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug');
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        isAuthReady = true;
+                        authStatusIndicator.classList.remove('bg-red-500', 'animate-pulse');
+                        authStatusIndicator.classList.add('bg-green-500'); // 'fresh sprout' is too light
+                        authStatusText.textContent = 'Connected (Admin)';
+                        addStudentBtn.disabled = false;
+                        
+                        // Start listening for student data
+                        listenForStudents();
+                    } else {
+                        isAuthReady = false;
+                        authStatusIndicator.classList.add('bg-red-500', 'animate-pulse');
+                        authStatusIndicator.classList.remove('bg-green-500');
+                        authStatusText.textContent = 'Connecting...';
+                        addStudentBtn.disabled = true;
+                        
+                        signInAnonymously(auth).catch((error) => {
+                            console.error("Firebase Auth: Anonymous sign-in failed:", error);
+                            authStatusText.textContent = 'Connection Failed';
+                        });
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                authStatusText.textContent = 'Initialization Error';
+            }
+            
+            // --- Event Listeners ---
+            document.getElementById('add-student-form').addEventListener('submit', handleAddStudent);
+            
+            // Monthly Fee Modal
+            document.getElementById('close-monthly-modal').addEventListener('click', () => toggleModal('monthly-fee-modal', false));
+            document.getElementById('save-monthly-fees').addEventListener('click', handleSaveMonthlyFees);
+            
+            // Other Fee Modal
+            document.getElementById('close-other-modal').addEventListener('click', () => toggleModal('other-fee-modal', false));
+            document.getElementById('add-other-fee-btn').addEventListener('click', handleAddOtherFee);
+
+            // Custom Confirm Modal
+            document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+                toggleModal('confirm-modal', false);
+                confirmCallback = null;
+            });
+            document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+                if (typeof confirmCallback === 'function') {
+                    confirmCallback();
+                }
+                toggleModal('confirm-modal', false);
+                confirmCallback = null;
+            });
+            
+            // Search Listener
+            document.getElementById('search-student-input').addEventListener('input', (e) => {
+                filterAndRenderStudents(e.target.value);
+            });
+            
+            // Dashboard Listeners
+            document.getElementById('prev-month-btn').addEventListener('click', () => moveDashboardMonth(-1));
+            document.getElementById('next-month-btn').addEventListener('click', () => moveDashboardMonth(1));
+            // ADDED: Class filter listener
+            document.getElementById('dashboard-class-filter').addEventListener('change', () => {
+                updateAllDashboards(); // Re-render the dashboards with the new filter
+            });
+            
+            // Set initial dashboard date
+            updateDashboardDate(dashboardDate);
+        });
+        
+        // --- FIRESTORE REAL-TIME LISTENER ---
+        
+        function listenForStudents() {
+            if (unsubscribeStudentListener) {
+                unsubscribeStudentListener(); // Stop previous listener
+            }
+            
+            const q = query(collection(db, "students"));
+            
+            unsubscribeStudentListener = onSnapshot(q, (querySnapshot) => {
+                allStudents = [];
+                querySnapshot.forEach((doc) => {
+                    allStudents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort students by name
+                allStudents.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // ADDED: Populate class filter
+                populateClassFilter(allStudents);
+                
+                // Get current search filter value and re-render
+                const searchTerm = document.getElementById('search-student-input').value;
+                filterAndRenderStudents(searchTerm);
+                
+                // **FIXED:** Removed the problematic line that caused the error
+                // document.getElementById('loading-students').style.display = 'none';
+
+            }, (error) => {
+                console.error("Error listening to student collection:", error);
+                showToast("Error loading student data.", "error");
+            });
+        }
+        
+        // --- RENDERING & UI ---
+
+        // ADDED: Function to populate the class filter dropdown
+        function populateClassFilter(students) {
+            const classFilter = document.getElementById('dashboard-class-filter');
+            const currentVal = classFilter.value; // Save current selection
+            
+            // Get unique class names
+            const classes = [...new Set(students.map(s => s.class))];
+            classes.sort(); // Sort alphabetically
+            
+            // Clear existing options (except "All Classes")
+            classFilter.innerHTML = '<option value="all">All Classes</option>';
+            
+            classes.forEach(className => {
+                if(className) { // Avoid adding blank/null classes
+                    const option = document.createElement('option');
+                    option.value = className;
+                    option.textContent = className;
+                    classFilter.appendChild(option);
+                }
+            });
+            
+            // Restore previous selection if it still exists
+            if (Array.from(classFilter.options).some(opt => opt.value === currentVal)) {
+                classFilter.value = currentVal;
+            }
+        }
+        
+        function filterAndRenderStudents(searchTerm = '') {
+            const container = document.getElementById('student-list-container');
+            const term = searchTerm.trim().toUpperCase();
+
+            if (term) {
+                filteredStudents = allStudents.filter(s => s.rollNumber.toUpperCase().includes(term));
+            } else {
+                filteredStudents = allStudents; // No search, show all
+            }
+            
+            renderStudentList(filteredStudents, container);
+            updateAllDashboards(); // Update stats and dashboards
+        }
+
+        function renderStudentList(students, container) {
+            container.innerHTML = ''; // Clear previous list
+            
+            if (students.length === 0) {
+                container.innerHTML = `<p class="text-gray-500">No students found.</p>`;
+                return;
+            }
+            
+            students.forEach(student => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200";
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center">
+                        <div>
+                            <h4 class="text-lg font-semibold text-[#003023]">${student.name}</h4>
+                            <p class="text-sm text-gray-600">Class: ${student.class} | Roll: ${student.rollNumber} | Phone: ${student.phone}</p>
+                        </div>
+                        <div class="flex-shrink-0 flex gap-2 mt-3 sm:mt-0">
+                            <button class="edit-monthly-btn text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors" data-id="${student.id}">
+                                Monthly Fees
+                            </button>
+                            <button class="manage-other-btn text-sm bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-200 transition-colors" data-id="${student.id}">
+                                Other Fees
+                            </button>
+                            <button class="delete-student-btn text-sm bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors" data-id="${student.id}">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Add event listeners for the new buttons
+                card.querySelector('.edit-monthly-btn').addEventListener('click', () => openMonthlyFeeModal(student.id));
+                card.querySelector('.manage-other-btn').addEventListener('click', () => openOtherFeeModal(student.id));
+                card.querySelector('.delete-student-btn').addEventListener('click', () => handleDeleteStudent(student.id, student.name));
+                
+                container.appendChild(card);
+            });
+            
+            // Re-render icons for delete buttons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        
+        function toggleModal(modalId, show = true) {
+            const modal = document.getElementById(modalId);
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            
+            // Reset classes
+            toast.className = 'fixed bottom-6 right-6 p-4 rounded-lg text-white shadow-lg transition-all transform z-[110]';
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600'); // Use standard green for success
+            } else {
+                toast.classList.add('bg-red-600');
+            }
+            
+            // Animate in
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            
+            // Animate out after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+            }, 3000);
+        }
+
+        function showConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmCallback = onConfirm;
+            toggleModal('confirm-modal', true);
+        }
+        
+        // --- DASHBOARD UPDATES (STATS) ---
+        
+        function updateAllDashboards() {
+            updateMainStats();
+            updateDashboardList();
+        }
+        
+        function updateMainStats() {
+            let totalPaid = 0;
+            let totalPending = 0;
+            
+            // Use 'allStudents' for main stats, not 'filteredStudents'
+            allStudents.forEach(student => {
+                (student.monthlyFees || []).forEach(fee => {
+                    if (fee.status === 'Paid') {
+                        totalPaid += fee.amount;
+                    } else if (fee.status === 'Pending') {
+                        totalPending += fee.amount;
+                    }
+                });
+                (student.otherFees || []).forEach(fee => {
+                    if (fee.status === 'Paid') {
+                        totalPaid += fee.amount;
+                    } else if (fee.status === 'Pending') {
+                        totalPending += fee.amount;
+                    }
+                });
+            });
+            
+            document.getElementById('stats-total-students').textContent = allStudents.length;
+            document.getElementById('stats-total-paid').textContent = `₹${totalPaid.toLocaleString('en-IN')}`;
+            document.getElementById('stats-total-pending').textContent = `₹${totalPending.toLocaleString('en-IN')}`;
+        }
+        
+        function moveDashboardMonth(direction) {
+            dashboardDate.setMonth(dashboardDate.getMonth() + direction);
+            updateDashboardDate(dashboardDate);
+            updateDashboardList();
+        }
+        
+        function updateDashboardDate(date) {
+            document.getElementById('dashboard-month').textContent = monthNames[date.getMonth()];
+            document.getElementById('dashboard-year').textContent = date.getFullYear();
+        }
+        
+        function updateDashboardList() {
+            const container = document.getElementById('dashboard-student-list');
+            container.innerHTML = ''; // Clear
+            
+            const monthName = monthNames[dashboardDate.getMonth()];
+            const selectedClass = document.getElementById('dashboard-class-filter').value;
+            let paidCount = 0;
+            
+            // MODIFIED: Apply class filter
+            const studentsToDisplay = filteredStudents.filter(student => {
+                return selectedClass === 'all' || student.class === selectedClass;
+            });
+
+            // Use 'filteredStudents' so the dashboard respects the search bar
+            if (studentsToDisplay.length === 0) {
+                 container.innerHTML = `<p class="text-gray-500 text-center">No students to display.</p>`;
+                 document.getElementById('dashboard-total-paid').textContent = 0;
+                 return;
+            }
+            
+            studentsToDisplay.forEach(student => {
+                const fee = (student.monthlyFees || []).find(f => f.month === monthName);
+                
+                let status = 'Not Set';
+                let statusClass = 'status-not-set';
+                
+                if (fee) {
+                    status = fee.status;
+                    if (fee.status === 'Paid') {
+                        statusClass = 'status-paid';
+                        paidCount++;
+                    } else {
+                        statusClass = 'status-pending';
+                    }
+                }
+                
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-lg border';
+                item.innerHTML = `
+                    <div>
+                        <p class="font-medium">${student.name}</p>
+                        <!-- UPDATED: Added student class -->
+                        <p class="text-xs text-gray-500">${student.class} | ${student.rollNumber}</p>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${statusClass}">${status}</span>
+                `;
+                container.appendChild(item);
+            });
+            
+            document.getElementById('dashboard-total-paid').textContent = paidCount;
+        }
+
+        // --- STUDENT MANAGEMENT FUNCTIONS ---
+        
+        async function handleAddStudent(e) {
+            e.preventDefault();
+            const addStudentBtn = document.getElementById('add-student-btn');
+            addStudentBtn.disabled = true;
+            addStudentBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Adding...';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            try {
+                const name = document.getElementById('student-name').value;
+                const s_class = document.getElementById('student-class').value;
+                const rollNumber = document.getElementById('student-roll').value.toUpperCase();
+                const phone = document.getElementById('student-phone').value;
+                const feeAmount = parseInt(document.getElementById('monthly-fee-amount').value, 10);
+                
+                if (!name || !s_class || !rollNumber || !phone || !feeAmount) {
+                    throw new Error("All fields are required.");
+                }
+
+                // Check for duplicate roll number
+                const q = query(collection(db, "students"), where("rollNumber", "==", rollNumber));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    showToast("A student with this Roll Number already exists.", "error");
+                    return; // Stop execution
+                }
+
+                // Create 12 months of fees
+                const monthlyFees = monthNames.map(month => ({
+                    month: month,
+                    amount: feeAmount,
+                    status: 'Pending'
+                }));
+
+                const studentData = {
+                    name,
+                    class: s_class,
+                    rollNumber,
+                    phone,
+                    monthlyFees,
+                    otherFees: [] // Initialize as empty array
+                };
+                
+                await addDoc(collection(db, "students"), studentData);
+                
+                showToast("Student added successfully!", "success");
+                document.getElementById('add-student-form').reset();
+
+            } catch (error) {
+                console.error("Error adding student:", error);
+                if (error.code === 'failed-precondition' || (error.message && error.message.includes('index'))) {
+                     showToast("Error: Database index is missing. Please contact support.", "error");
+                     console.error("FIRESTORE ERROR: The query to check for duplicate roll numbers requires an index. Go to your Firebase console -> Firestore Database -> Indexes and create an index for 'students' on 'rollNumber' (Ascending).");
+                } else {
+                    showToast(`Error adding student: ${error.message}`, "error");
+                }
+            } finally {
+                addStudentBtn.disabled = false;
+                addStudentBtn.innerHTML = '<i data-lucide="user-plus" class="w-5 h-5"></i> Add Student';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+        
+        function handleDeleteStudent(studentId, studentName) {
+            showConfirmModal(
+                'Delete Student?',
+                `Are you sure you want to delete ${studentName} (Roll: ${allStudents.find(s=>s.id === studentId).rollNumber})? This action cannot be undone.`,
+                async () => {
+                    try {
+                        await deleteDoc(doc(db, "students", studentId));
+                        showToast("Student deleted successfully.", "success");
+                        // The onSnapshot listener will handle the UI update automatically.
+                    } catch (error) {
+                        console.error("Error deleting student:", error);
+                        showToast("Error deleting student.", "error");
+                    }
+                }
+            );
+        }
+
+        // --- FEE MANAGEMENT FUNCTIONS ---
+
+        function openMonthlyFeeModal(studentId) {
+            currentStudentId = studentId;
+            const student = allStudents.find(s => s.id === studentId);
+            if (!student) return;
+            
+            document.getElementById('modal-student-name-monthly').textContent = `${student.name} (${student.rollNumber})`;
+            const editor = document.getElementById('monthly-fees-editor');
+            editor.innerHTML = ''; // Clear old fields
+            
+            (student.monthlyFees || []).forEach(fee => {
+                editor.innerHTML += `
+                    <div class="grid grid-cols-3 gap-3 items-center">
+                        <label class="font-medium">${fee.month}</label>
+                        <input type="number" value="${fee.amount}" class="month-amount-input mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg" data-month="${fee.month}">
+                        <select class="month-status-select mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg bg-white" data-month="${fee.month}">
+                            <option value="Pending" ${fee.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Paid" ${fee.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                        </select>
+                    </div>
+                `;
+            });
+            
+            toggleModal('monthly-fee-modal', true);
+        }
+        
+        async function handleSaveMonthlyFees() {
+            if (!currentStudentId) return;
+            
+            try {
+                const amountInputs = document.querySelectorAll('#monthly-fees-editor .month-amount-input');
+                const statusSelects = document.querySelectorAll('#monthly-fees-editor .month-status-select');
+                
+                const student = allStudents.find(s => s.id === currentStudentId);
+                let updatedFees = [...(student.monthlyFees || [])];
+
+                amountInputs.forEach(input => {
+                    const month = input.dataset.month;
+                    const fee = updatedFees.find(f => f.month === month);
+                    if (fee) {
+                        fee.amount = parseInt(input.value, 10) || 0;
+                    }
+                });
+                
+                statusSelects.forEach(select => {
+                    const month = select.dataset.month;
+                    const fee = updatedFees.find(f => f.month === month);
+                    if (fee) {
+                        fee.status = select.value;
+                    }
+                });
+                
+                const studentDocRef = doc(db, "students", currentStudentId);
+                await updateDoc(studentDocRef, { monthlyFees: updatedFees });
+                
+                showToast("Monthly fees updated successfully!", "success");
+                toggleModal('monthly-fee-modal', false);
+                // UI will update via onSnapshot listener
+
+            } catch (error) {
+                console.error("Error updating monthly fees:", error);
+                showToast("Error saving changes.", "error");
+            }
+        }
+        
+        function openOtherFeeModal(studentId) {
+            currentStudentId = studentId;
+            const student = allStudents.find(s => s.id === studentId);
+            if (!student) return;
+            
+            document.getElementById('modal-student-name-other').textContent = `${student.name} (${student.rollNumber})`;
+            renderOtherFeesList(student.otherFees || []);
+            
+            toggleModal('other-fee-modal', true);
+        }
+
+        function renderOtherFeesList(otherFees) {
+            const listContainer = document.getElementById('other-fees-list');
+            listContainer.innerHTML = ''; // Clear
+            
+            if (otherFees.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-500 text-center">No other fees found.</p>`;
+                return;
+            }
+            
+            otherFees.forEach((fee, index) => {
+                const statusClass = fee.status === 'Paid' ? 'status-paid' : 'status-pending';
+                listContainer.innerHTML += `
+                    <div class="bg-gray-50 p-3 rounded-lg border flex justify-between items-center">
+                        <div>
+                            <p class="font-medium">${fee.name}</p>
+                            <p class="text-sm text-gray-600">Amount: ₹${fee.amount}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${statusClass}">${fee.status}</span>
+                             <button class="delete-other-fee-btn text-red-500 hover:text-red-700" data-index="${index}">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                             </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Add listeners to new delete buttons
+            listContainer.querySelectorAll('.delete-other-fee-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index, 10);
+                    const student = allStudents.find(s => s.id === currentStudentId);
+                    const feeName = student.otherFees[index].name;
+                    
+                    showConfirmModal(
+                        'Delete Fee?',
+                        `Are you sure you want to delete the "${feeName}" fee?`,
+                        () => handleDeleteOtherFee(index)
+                    );
+                });
+            });
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        async function handleAddOtherFee() {
+            if (!currentStudentId) return;
+            
+            const nameInput = document.getElementById('new-other-fee-name');
+            const amountInput = document.getElementById('new-other-fee-amount');
+            
+            const feeName = nameInput.value.trim();
+            const feeAmount = parseInt(amountInput.value, 10);
+            
+            if (!feeName || !feeAmount) {
+                showToast("Please enter both a fee name and an amount.", "error");
+                return;
+            }
+            
+            try {
+                const student = allStudents.find(s => s.id === currentStudentId);
+                let updatedOtherFees = [...(student.otherFees || [])];
+                
+                updatedOtherFees.push({
+                    name: feeName,
+                    amount: feeAmount,
+                    status: 'Pending'
+                });
+                
+                const studentDocRef = doc(db, "students", currentStudentId);
+                await updateDoc(studentDocRef, { otherFees: updatedOtherFees });
+                
+                showToast("Other fee added successfully!", "success");
+                nameInput.value = '';
+                amountInput.value = '';
+                
+                // Manually re-render the list inside the modal
+                renderOtherFeesList(updatedOtherFees);
+
+            } catch (error) { // Fixed missing brace
+                console.error("Error adding other fee:", error);
+                showToast("Error adding fee.", "error");
+            }
+        }
+        
+        async function handleDeleteOtherFee(index) {
+            if (!currentStudentId) return;
+            
+            try {
+                const student = allStudents.find(s => s.id === currentStudentId);
+                let updatedOtherFees = [...(student.otherFees || [])];
+                
+                updatedOtherFees.splice(index, 1); // Remove the fee at the specified index
+                
+                const studentDocRef = doc(db, "students", currentStudentId);
+                await updateDoc(studentDocRef, { otherFees: updatedOtherFees });
+                
+                showToast("Fee deleted successfully.", "success");
+                renderOtherFeesList(updatedOtherFees); // Re-render modal list
+
+            } catch (error) {
+                console.error("Error deleting other fee:", error);
+                showToast("Error deleting fee.", "error");
+            }
+        }
+        
+    </script>
+</body>
+</html>
 
