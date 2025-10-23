@@ -1,1 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rafi University Fee Portal</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- AOS (Animate On Scroll) Library CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    
+    <!-- jsPDF Libraries for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        /* Custom styles with the new color palette */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* UPDATED: 'morning dew' background */
+            background-color: #F6FEF9;
+            overflow-x: hidden; /* Prevent horizontal scrollbar from AOS animations */
+        }
+        .status-paid {
+            /* UPDATED: 'fresh sprout' theme */
+            background-color: rgba(131, 196, 65, 0.2); /* #83C441 at 20% opacity */
+            color: #83C441;
+        }
+        .status-pending {
+            background-color: #fffbeb; /* Tailwind's yellow-100 */
+            color: #b45309; /* Tailwind's yellow-700 */
+        }
+        
+        /* Custom styles for the notification toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0;
+            z-index: 100;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0); /* Corrected transform */
+        }
+        #toast.success {
+            /* UPDATED: 'harvest' theme */
+            background-color: #003023;
+        }
+        #toast.error {
+            background-color: #ef4444; /* Tailwind's red-500 */
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="container mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+        <!-- Header Section -->
+        <header class="text-center mb-8 flex flex-col items-center" data-aos="fade-down">
+            <!-- School Logo -->
+            <img src="https://i.ibb.co/mCP7MD6m/image-20250927-120756-0000.png" alt="Rafi University Logo" class="h-20 w-20 mb-4 object-contain">
+            <!-- UPDATED: 'harvest' text color -->
+            <h1 class="text-3xl sm:text-4xl font-bold text-[#003023]">Rafi University</h1>
+            <p class="text-gray-600 mt-2">Annual Fee Payment Portal</p>
+        </header>
+        
+        <!-- Search Section -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8 border border-gray-200" data-aos="fade-up">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Find Student Details</h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="relative flex-grow">
+                    <!-- UPDATED: 'harvest' focus ring -->
+                    <input type="text" id="roll-number-input" placeholder="Enter Roll Number (e.g., A-123)" class="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#003023] transition-shadow">
+                     <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </span>
+                </div>
+                <!-- UPDATED: 'harvest' button color -->
+                <button id="search-btn" class="bg-[#003023] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#001a12] transition-colors duration-300 flex items-center justify-center gap-2">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Student Data Section (Initially Hidden) -->
+        <div id="student-data-section" class="hidden">
+            <!-- Student Details Card -->
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8 border border-gray-200" data-aos="fade-up" data-aos-delay="100">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Student Information</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Student Name</p>
+                        <p id="student-name" class="text-lg font-semibold text-gray-900"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Class</p>
+                        <p id="student-class" class="text-lg font-semibold text-gray-900"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Roll Number</p>
+                        <p id="student-roll" class="text-lg font-semibold text-gray-900"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fees Payment Grid -->
+            <main data-aos="fade-up" data-aos-delay="200">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Fee Payments</h2>
+                <!-- Monthly Fees -->
+                <h3 class="text-lg font-medium text-gray-700 mb-3">Monthly Fees</h3>
+                <div id="monthly-fees-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Monthly fee cards will be dynamically inserted here -->
+                </div>
+                
+                <!-- Other Fees -->
+                <h3 class="text-lg font-medium text-gray-700 mb-3">Other Fees</h3>
+                <div id="other-fees-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Other fee cards will be dynamically inserted here -->
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer Section -->
+        <footer class="text-center mt-12 py-4" data-aos="fade-up" data-aos-delay="300">
+            <div class="flex justify-center items-center gap-8">
+                <div class="flex items-center gap-2 text-gray-500">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    <span class="text-sm">SSL Secure</span>
+                </div>
+                <div class="flex items-center gap-2 text-gray-500">
+                    <!-- UPDATED: Icon to match user image -->
+                    <i data-lucide="shield-dot" class="w-5 h-5"></i>
+                    <span class="text-sm">Trusted by Parents</span>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+    
+    <!-- Notification Toast Element -->
+    <div id="toast" class=""></div>
+
+    <!-- MOVED: Lucide Icons Script (Updated to latest) -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- AOS (Animate On Scroll) Library JS -->
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyCGZHCC5mIFvO1w936PAmk6dTbEVAHQi5A",
+          authDomain: "monthly-fee-payments.firebaseapp.com",
+          projectId: "monthly-fee-payments",
+          storageBucket: "monthly-fee-payments.firebasestorage.app",
+          messagingSenderId: "583176823557",
+          appId: "1:583176823557:web:7e7f4eed0bdc27f78f4d6c",
+          measurementId: "G-1FW66VC988"
+        };
+        // User's provided live key
+        const razorpayKey = 'rzp_live_bVX9625cESvXdO';
+
+        // --- GLOBAL VARIABLES ---
+        let db, auth;
+        let isAuthReady = false;
+        let currentStudentData = null;
+        let currentStudentDocId = null;
+
+        // --- EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            AOS.init({
+                duration: 800,
+                once: true,
+                offset: 50,
+            });
+            
+            // Call createIcons() here
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            } else {
+                console.warn("Lucide icons script not loaded yet.");
+            }
+
+            document.getElementById('search-btn').addEventListener('click', handleSearch);
+            document.getElementById('roll-number-input').addEventListener('keyup', (event) => {
+                 if (event.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug');
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        console.log("Firebase Auth: Signed in anonymously.", user.uid);
+                        isAuthReady = true;
+                    } else {
+                        isAuthReady = false;
+                        signInAnonymously(auth).catch((error) => {
+                            console.error("Firebase Auth: Anonymous sign-in failed:", error);
+                            showToast('Could not connect to service.', 'error');
+                        });
+                    }
+                });
+
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                showToast('Error initializing payment service.', 'error');
+            }
+        });
+        
+        /**
+         * Handles the search for a student by roll number.
+         */
+        async function handleSearch() {
+            const rollInput = document.getElementById('roll-number-input');
+            const rollNumber = rollInput.value.trim().toUpperCase();
+            const studentDataSection = document.getElementById('student-data-section');
+            
+            if (!rollNumber) {
+                showToast('Please enter a roll number.', 'error');
+                return;
+            }
+            if (!isAuthReady) {
+                showToast('Connecting to service... Please try again.', 'error');
+                return;
+            }
+
+            // Show loading state
+            const searchBtn = document.getElementById('search-btn');
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+
+            try {
+                // Query Firestore for the student
+                const q = query(collection(db, "students"), where("rollNumber", "==", rollNumber));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    // Student not found
+                    studentDataSection.classList.add('hidden');
+                    showToast('Student not found. Please check the Roll Number.', 'error');
+                } else {
+                    // Student found
+                    const studentDoc = querySnapshot.docs[0];
+                    currentStudentData = studentDoc.data();
+                    currentStudentDocId = studentDoc.id;
+                    
+                    document.getElementById('student-name').textContent = currentStudentData.name;
+                    document.getElementById('student-class').textContent = currentStudentData.class;
+                    document.getElementById('student-roll').textContent = currentStudentData.rollNumber;
+                    
+                    // Render fee cards
+                    renderFeeCards(currentStudentData.monthlyFees || [], 'monthly-fees-grid', 'monthly');
+                    renderFeeCards(currentStudentData.otherFees || [], 'other-fees-grid', 'other');
+                    
+                    studentDataSection.classList.remove('hidden');
+                    
+                    // This was moved here to fix a race condition
+                    showToast(`Displaying details for ${currentStudentData.name}.`, 'success');
+                    
+                    // Refresh AOS to detect new elements
+                    setTimeout(() => AOS.refresh(), 100);
+                }
+
+            } catch (error) {
+                console.error("Error searching student:", error);
+                // FIXED: Clearer error message for missing index
+                if (error.code === 'failed-precondition' || (error.message && error.message.includes('index'))) {
+                    showToast('Error: Database is not configured. Please contact admin.', 'error', 5000);
+                    console.error("FIRESTORE ERROR: The query requires an index. Go to your Firebase console -> Firestore Database -> Indexes and create an index for 'students' on 'rollNumber' (Ascending).");
+                } else {
+                    showToast('Error finding student.', 'error');
+                }
+                studentDataSection.classList.add('hidden');
+            } finally {
+                // Restore search button
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+            }
+        }
+
+        /**
+         * Renders fee cards for the currently selected student.
+         * @param {Array} fees - The array of fee objects for the student.
+         * @param {string} gridId - The ID of the grid container to render to.
+         * @param {'monthly' | 'other'} feeType - The type of fee.
+         */
+        function renderFeeCards(fees, gridId, feeType) {
+            const feesGrid = document.getElementById(gridId);
+            feesGrid.innerHTML = ''; // Clear existing cards
+
+            if (fees.length === 0) {
+                feesGrid.innerHTML = `<p class="text-gray-500 col-span-full">No ${feeType} fees found.</p>`;
+                return;
+            }
+
+            fees.forEach((fee, index) => {
+                const feeName = feeType === 'monthly' ? fee.month : fee.name;
+                const isPaid = fee.status === 'Paid';
+                const statusClass = isPaid ? 'status-paid' : 'status-pending';
+                
+                // --- MODIFIED: Button logic ---
+                let buttonHTML;
+                if (isPaid) {
+                    // Show 'Download Receipt' button, styled with 'fresh sprout' color
+                    buttonHTML = `
+                        <button class="w-full text-white font-bold py-2 px-4 rounded-lg mt-4 transition-colors duration-300 bg-[#83C441] hover:bg-[#6aa034]" 
+                            onclick="downloadReceipt(${index}, '${feeType}')">
+                            <i data-lucide="download" class="w-4 h-4 inline-block -mt-1 mr-1"></i>
+                            Download Receipt
+                        </button>`;
+                } else {
+                    // Show 'Pay Now' button, styled with 'harvest' color
+                    buttonHTML = `
+                        <button class="w-full text-white font-bold py-2 px-4 rounded-lg mt-4 transition-colors duration-300 bg-[#003023] hover:bg-[#001a12]" 
+                            onclick="payFee(${index}, '${feeType}')">
+                            Pay Now
+                        </button>`;
+                }
+                // --- END MODIFICATION ---
+
+                const cardHTML = `
+                    <div class="bg-white rounded-xl shadow-md p-5 border border-gray-200 flex flex-col justify-between transition-transform transform hover:scale-105" data-aos="fade-up" data-aos-delay="${index * 50}">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-lg font-semibold text-gray-800">${feeName}</h3>
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${statusClass}">${fee.status}</span>
+                            </div>
+                            <p class="text-2xl font-bold text-gray-900">₹${fee.amount.toLocaleString('en-IN')}</p>
+                        </div>
+                        <!-- MODIFIED: Insert button HTML -->
+                        ${buttonHTML}
+                    </div>`;
+                feesGrid.innerHTML += cardHTML;
+            });
+            
+            // Re-render icons for the new buttons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+        
+        /**
+         * Initiates the Razorpay payment process.
+         * @param {number} feeIndex - The index of the fee in its respective array.
+         * @param {'monthly' | 'other'} feeType - The type of fee.
+         */
+        window.payFee = function(feeIndex, feeType) {
+            const fee = (feeType === 'monthly') ? 
+                currentStudentData.monthlyFees[feeIndex] : 
+                currentStudentData.otherFees[feeIndex];
+                
+            const feeName = (feeType === 'monthly') ? fee.month : fee.name;
+
+            if (fee.status === 'Paid') return;
+
+            const options = {
+                key: razorpayKey,
+                amount: fee.amount * 100, // Amount in paise
+                currency: "INR",
+                name: "Rafi University",
+                description: `Fee Payment for ${feeName}`,
+                // UPDATED: 'harvest' placeholder logo
+                image: "https://placehold.co/100x100/003023/ffffff?text=RU",
+                handler: (response) => {
+                    console.log("Payment successful:", response);
+                    updateFeeStatus(feeIndex, feeType, response.razorpay_payment_id);
+                    showToast(`Payment for ${feeName} successful!`, 'success');
+                },
+                prefill: {
+                    name: currentStudentData.name,
+                    email: "student@example.com", // Placeholder
+                    contact: currentStudentData.phone
+                },
+                notes: {
+                    month_or_fee_name: feeName,
+                    roll_number: currentStudentData.rollNumber,
+                    student_doc_id: currentStudentDocId
+                },
+                theme: { color: "#003023" },
+                modal: {
+                    ondismiss: () => {
+                        console.log("Payment modal closed.");
+                        showToast(`Payment for ${feeName} was cancelled.`, 'error');
+                    }
+                }
+            };
+            
+            try {
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', (response) => {
+                    console.error("Payment failed:", response);
+                    showToast(`Payment failed: ${response.error.description}`, 'error', 5000);
+                });
+                rzp.open();
+            } catch(e) {
+                console.error("Error initiating Razorpay checkout:", e);
+                showToast("Could not initiate payment.", "error");
+            }
+        }
+        
+        /**
+         * Updates a fee's status after successful payment and re-renders the cards.
+         * @param {number} feeIndex - The index of the fee.
+         * @param {'monthly' | 'other'} feeType - The type of fee.
+         * @param {string} paymentId - The Razorpay payment ID.
+         */
+        async function updateFeeStatus(feeIndex, feeType, paymentId) {
+            try {
+                let updatedData = JSON.parse(JSON.stringify(currentStudentData));
+                
+                // Get current date for the receipt
+                const paymentDate = new Date().toISOString();
+
+                if (feeType === 'monthly') {
+                    updatedData.monthlyFees[feeIndex].status = 'Paid';
+                    updatedData.monthlyFees[feeIndex].paymentId = paymentId;
+                    updatedData.monthlyFees[feeIndex].paymentDate = paymentDate; // ADDED
+                } else {
+                    updatedData.otherFees[feeIndex].status = 'Paid';
+                    updatedData.otherFees[feeIndex].paymentId = paymentId;
+                    updatedData.otherFees[feeIndex].paymentDate = paymentDate; // ADDED
+                }
+                
+                const dataToUpdate = {
+                    monthlyFees: updatedData.monthlyFees,
+                    otherFees: updatedData.otherFees
+                };
+
+                const studentDocRef = doc(db, "students", currentStudentDocId);
+                await updateDoc(studentDocRef, dataToUpdate);
+                
+                currentStudentData = updatedData;
+                
+                // Re-render cards to show "Download Receipt" button
+                renderFeeCards(currentStudentData.monthlyFees, 'monthly-fees-grid', 'monthly');
+                renderFeeCards(currentStudentData.otherFees, 'other-fees-grid', 'other');
+
+            } catch (error) {
+                console.error("Error updating fee status in Firestore:", error);
+                showToast("Payment successful, but failed to update record. Please contact admin.", "error", 5000);
+            }
+        }
+
+        // --- ADDED: New function for PDF Generation ---
+        /**
+         * Generates and downloads a PDF receipt for a paid fee.
+         * @param {number} feeIndex - The index of the fee in its respective array.
+         * @param {'monthly' | 'other'} feeType - The type of fee.
+         */
+        window.downloadReceipt = function(feeIndex, feeType) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Get data
+                const student = currentStudentData;
+                const fee = (feeType === 'monthly') ? 
+                    student.monthlyFees[feeIndex] : 
+                    student.otherFees[feeIndex];
+                
+                const feeName = (feeType === 'monthly') ? fee.month : fee.name;
+                const paymentId = fee.paymentId || 'N/A';
+                const paymentDate = fee.paymentDate ? 
+                    new Date(fee.paymentDate).toLocaleDateString('en-IN') : 
+                    new Date().toLocaleDateString('en-IN');
+                
+                const fileName = `Receipt-${student.rollNumber}-${feeName}.pdf`;
+
+                // --- Build PDF Document ---
+
+                // Header
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Rafi University", 105, 20, { align: 'center' });
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'normal');
+                doc.text("Fee Receipt", 105, 30, { align: 'center' });
+
+                // Student Info
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Billed To:", 20, 50);
+                doc.setFont('helvetica', 'normal');
+                doc.text(student.name, 20, 57);
+                doc.text(`Roll No: ${student.rollNumber}`, 20, 64);
+                doc.text(`Class: ${student.class}`, 20, 71);
+
+                // Payment Info
+                doc.setFont('helvetica', 'bold');
+                doc.text("Receipt No:", 140, 50);
+                doc.setFont('helvetica', 'normal');
+                doc.text(paymentId, 170, 50);
+
+                doc.setFont('helvetica', 'bold');
+                doc.text("Payment Date:", 140, 57);
+                doc.setFont('helvetica', 'normal');
+                doc.text(paymentDate, 170, 57);
+
+                // Fee Table
+                doc.autoTable({
+                    startY: 85,
+                    head: [['Description', 'Amount', 'Status']],
+                    body: [
+                        [feeName, `₹${fee.amount.toLocaleString('en-IN')}`, 'Paid']
+                    ],
+                    theme: 'striped',
+                    headStyles: { 
+                        fillColor: [0, 48, 35] // 'harvest' color #003023
+                    }
+                });
+
+                // Total
+                const finalY = doc.autoTable.previous.finalY;
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Total Paid:", 140, finalY + 15);
+                doc.text(`₹${fee.amount.toLocaleString('en-IN')}`, 190, finalY + 15, { align: 'right' });
+
+                // Footer
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'italic');
+                doc.text("This is a computer-generated receipt and does not require a signature.", 105, 280, { align: 'center' });
+
+                // Save
+                doc.save(fileName);
+                showToast('Receipt downloaded!', 'success');
+
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                showToast('Could not generate receipt.', 'error');
+            }
+        }
+        // --- END ADDED FUNCTION ---
+
+        /**
+         * Shows a notification toast message.
+         */
+        function showToast(message, type = 'success', duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = ``; // Clear existing classes
+            toast.classList.add(type, 'show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+    </script>
+</body>
+</html>
 
